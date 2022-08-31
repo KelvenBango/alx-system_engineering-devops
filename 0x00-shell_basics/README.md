@@ -4,3 +4,4 @@
 3-listfiles	-> Display current directory contents in a long format
 4-listmorefiles	-> Display current directory including hidden files
 5-listfilesdigitonly	-> Display current directory contents (Long format, with user and group IDs displayed numerically)
+6-firstdirectory	-> Script that creates a directory
