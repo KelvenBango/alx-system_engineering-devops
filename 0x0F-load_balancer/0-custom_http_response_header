@@ -1,28 +1,47 @@
 #!/usr/bin/env bash
-# Customizing a 404-error_page
+# script to install and setup nginx
+CONFIG_FILE="/etc/nginx/sites-available/default"
+HOST_NAME=$(hostname)
+MY_ID=496
 
-# Updating Packages before performing installations
-sudo apt-get update
-sudo apt-get install -y nginx
+# check if hostname is correct
+if [[ $(hostname) =~ ^$MY_ID-web-[0-9]+ ]]; then
+    echo 'hostname properly configured'
+else
+    (>&2 echo 'hostname not configured properly...')
+    (>&2 echo 'please set hostname to pattern: 496-web-<server_id>...')
+    (>&2 echo 'Example: sudo hostnamectl set-hostname 496-web-<insert_server_id_here>')
+fi
 
-# Creating an index.html page
-echo "Hello World!" | sudo tee /var/www/html/index.html
+# install nginx
+apt-get -y update
+apt-get -y install nginx
 
-# Performing a "moved permanently redirection" (301)
-new_string="server_name _;\n\trewrite ^\/redirect_me https:\/\/github.com\/besthor permanent;"
-sudo sed -i "s/server_name _;/$new_string/" /etc/nginx/sites-enabled/default
+# update index.html file
+echo 'Holberton School' > /usr/share/nginx/html/index.html
+echo "Ceci n'est pas une page" > /usr/share/nginx/html/404.html
 
-# Creating a 404 Custom error page
-echo "Ceci n'est pas une page" | sudo tee /var/www/html/404.html
-new_string="listen 80 default_server;\n\terror_page 404 \/404.html;\n\tlocation = \/404.html {\n\t\troot \/var\/www\/html;\n\t\tinternal;\n\t}"
+# update config file to redirect
+printf %s "server {
+    listen 80;
+    listen [::]:80 default_server;
+    root   /usr/share/nginx/html;
+    index  index.html index.htm;
 
-sudo sed -i "s/listen 80 default_server;/$new_string/" /etc/nginx/sites-enabled/default
+    add_header X-Served-By $HOST_NAME;
 
-# Creating an HTTP response header
-sudo sed -i "/server_name _/a add_header X-Served-By $HOSTNAME;" /etc/nginx/sites-enabled/default
+    location /redirect_me {
+        return 301 http://google.com/;
+    }
 
-# Testing configurations for syntax errors
-sudo nginx -t
+    error_page 404 /404.html;
+    location /404 {
+      root /usr/share/nginx/html;
+      internal;
+    }
+}" > $CONFIG_FILE
 
-# Restart nginx after implementing changes
-sudo service nginx restart
+# start nginx after reloading config
+service nginx start
+# if nginx was already running restart it
+service nginx restart
